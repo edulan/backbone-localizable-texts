@@ -3,201 +3,34 @@
 <head>
 	<meta charset="UTF-8">
 	<title>Localizable texts with Backbone.js</title>
-	<script src="lib/jquery-2.0.1.js"></script>
-	<script src="lib/underscore.js"></script>
-	<script src="lib/backbone.js"></script>
-	<script src="lib/backbone-mutators.js"></script>
 </head>
 <body>
 	<div id="form"></div>
 	<hr>
 	<div id="inspect"></div>
 	<script type="text/template" id="form-template">
-		<div>
-			<a href=# class="locale-btn" data-locale="es">es-ES</a>
-			 |
-			<a href=# class="locale-btn" data-locale="en">en-US</a>
-			 |
-			<a href=# class="locale-btn" data-locale="fr">fr-FR</a>
-		</div>
-		<div>
-			<input type="text" name="title" value="<%= data.title %>">
-		</div>
-		<div>
-			<input type="text" name="description" value="<%= data.description %>">
-		</div>
-		<div>
-			<input type="text" name="other" value="<%= data.other %>">
-		</div>
-		<div>
-			<input type="submit" id="save-btn" value="Actualizar">
-		</div>
-		<div>
-			<input type="submit" id="save-all-locales-btn" value="Actualizar todos">
-		</div>
+        <div>
+            <a href=# class="locale-btn" data-locale="es">es-ES</a>
+            |
+            <a href=# class="locale-btn" data-locale="en">en-US</a>
+            |
+            <a href=# class="locale-btn" data-locale="fr">fr-FR</a>
+        </div>
+        <div>
+            <input type="text" name="title" value="<%= data.title %>"></div>
+        <div>
+            <input type="text" name="description" value="<%= data.description %>"></div>
+        <div>
+            <input type="text" name="other" value="<%= data.other %>"></div>
+        <div>
+            <input type="submit" id="save-btn" value="Actualizar"></div>
+        <div>
+            <input type="submit" id="save-all-locales-btn" value="Actualizar todos"></div>
 	</script>
-	<script>
-		$(function() {
-			var LocalizableModel = Backbone.Model.extend({
-				mutators: function() {
-					if (!this.localizableAttributes) {
-						return {};
-					}
-
-					return _.reduce(this.localizableAttributes, function(mutators, attr) {
-						mutators[attr] = _.bind(function(mutator, key, value, options) {
-							if (key){
-								this.serializeLocalizable(attr, value, mutator);
-								return;
-							}
-
-							return this.deserializeLocalizable(attr, mutator);
-						}, this);
-
-						return mutators;
-					}, {}, this);
-				},
-
-				deserializeLocalizable: function(attr, get) {
-					var v = this.attributes[attr] || {};
-
-					if (!this.defaultLocale) {
-						throw new Error("Please assign a default locale");
-					}
-
-					if (!_.isUndefined(v[this.locale])) {
-						return v[this.locale];
-					}
-					if (!_.isUndefined(v[this.defaultLocale])) {
-						return v[this.defaultLocale];
-					}
-
-					return '';
-				},
-
-				serializeLocalizable: function(attr, value, set) {
-					var v = {};
-
-					if (!this.defaultLocale) {
-						throw new Error("Please assign a default locale");
-					}
-
-					v[this.locale || this.defaultLocale] = value;
-					set(attr, _.defaults(v, this.attributes[attr] || {}));
-				},
-
-				setLocale: function(locale) {
-					this.locale = locale;
-					this.trigger('change', this);
-				},
-
-				getLocale: function() {
-					return this.locale;
-				},
-
-				setForLocale: function(attributes, locale) {
-					this.locale = locale;
-					this.set(attributes);
-				}
-			});
-
-			var Book = LocalizableModel.extend({
-				defaultLocale: 'es',
-
-				localizableAttributes: [
-					'title',
-					'description',
-					'other'
-				],
-
-				defaults: {
-					title: "Hola mundo!",
-					description: "Ejemplo",
-					other: "Awesome"
-				}
-			});
-
-			var FormView = Backbone.View.extend({
-				tmpl: $("#form-template").html(),
-
-				events: {
-					"click .locale-btn": "toggleLocale",
-					"click #save-btn": "save",
-					"click #save-all-locales-btn": "saveAllLocales"
-				},
-
-				initialize: function(options) {
-					this.listenTo(this.model, 'change', this.render);
-				},
-
-				render: function() {
-					this.$el.html(_.template(this.tmpl, this.model.toData()));
-					return this;
-				},
-
-				save: function(event) {
-					var title = this.$("input[name='title']").val();
-					var description = this.$("input[name='description']").val();
-					var other = this.$("input[name='other']").val();
-
-					event.preventDefault();
-
-					this.model.set({
-						title: title,
-						description: description,
-						other: other
-					});
-				},
-
-				saveAllLocales: function(event) {
-					var title = this.$("input[name='title']").val();
-					var description = this.$("input[name='description']").val();
-					var other = this.$("input[name='other']").val();
-
-					event.preventDefault();
-
-					_.each(['es', 'en', 'fr'], function(locale) {
-						this.model.setForLocale({
-							title: title,
-							description: description,
-							other: other
-						}, locale);
-					}, this);
-				},
-
-				toggleLocale: function(event) {
-					var locale = $(event.currentTarget).data('locale');
-
-					this.model.setLocale(locale);
-					event.preventDefault();
-				}
-			});
-			var InspectView = Backbone.View.extend({
-				initialize: function(options) {
-					this.listenTo(this.model, 'change', this.render);
-				},
-
-				render: function() {
-					var json = JSON.stringify(this.model.toJSON(), undefined, 2);
-
-					this.$el.html("<pre>" + json + "</pre>");
-					return this;
-				},
-			});
-
-			var book = new Book();
-			var formView = new FormView({
-				el: $("#form"),
-				model: book
-			});
-			var inspectView = new InspectView({
-				el: $("#inspect"),
-				model: book
-			});
-
-			formView.render();
-			inspectView.render();
-		});
-	</script>
+	<script src="lib/jquery-2.0.1.js"></script>
+	<script src="lib/underscore.js"></script>
+	<script src="lib/backbone.js"></script>
+    <script src="lib/backbone-mutators.js"></script>
+	<script src="src/backbone.localizableTexts.js"></script>
 </body>
 </html>
